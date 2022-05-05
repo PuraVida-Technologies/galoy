@@ -50,10 +50,10 @@ const IntraLedgerPaymentSendMutation = GT.Field({
     const btcWalletValidated = await validateIsBtcWalletForMutation(senderWalletId)
     if (btcWalletValidated != true) return btcWalletValidated
 
-    const recipientBtcWalletValidated = await validateIsBtcWalletForMutation(
-      recipientWalletId,
-    )
-    if (recipientBtcWalletValidated != true) return recipientBtcWalletValidated
+    // const recipientBtcWalletValidated = await validateIsBtcWalletForMutation(
+    //   recipientWalletId,
+    // )
+    // if (recipientBtcWalletValidated != true) return recipientBtcWalletValidated
 
     const recipientUsername = await Accounts.getUsernameFromWalletId(
       recipientWalletIdChecked,
@@ -63,8 +63,8 @@ const IntraLedgerPaymentSendMutation = GT.Field({
       return { errors: [{ message: appErr.message }] }
     }
 
-    const status = await Wallets.intraledgerPaymentSendUsername({
-      recipientUsername,
+    const status = await Wallets.intraledgerPaymentSendWalletId({
+      recipientWalletId,
       memo,
       amount,
       senderWalletId: walletId,
@@ -72,6 +72,7 @@ const IntraLedgerPaymentSendMutation = GT.Field({
       logger,
     })
     if (status instanceof Error) {
+      console.log("HERE 1:", status)
       const appErr = mapError(status)
       return { status: "failed", errors: [{ message: appErr.message }] }
     }

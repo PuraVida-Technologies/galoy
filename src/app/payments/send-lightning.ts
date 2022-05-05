@@ -439,7 +439,7 @@ const newCheckAndVerifyTwoFA = async ({
   return true
 }
 
-const executePaymentViaIntraledger = async ({
+export const executePaymentViaIntraledger = async ({
   paymentFlow,
   senderWallet,
   logger,

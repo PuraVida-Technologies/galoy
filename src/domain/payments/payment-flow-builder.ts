@@ -11,16 +11,19 @@ import { PaymentFlow } from "./payment-flow"
 export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
   config: LightningPaymentFlowBuilderConfig,
 ): LightningPaymentFlowBuilder<S> => {
-  const settlementMethodFromInvoice = (
-    invoice: LnInvoice,
+  const settlementMethodFromDestination = (
+    destination: Pubkey | undefined,
   ): {
     settlementMethod: SettlementMethod
     btcProtocolFee: BtcPaymentAmount | undefined
     usdProtocolFee: UsdPaymentAmount | undefined
   } => {
-    const settlementMethod = config.localNodeIds.includes(invoice.destination)
-      ? SettlementMethod.IntraLedger
-      : SettlementMethod.Lightning
+    const settlementMethod =
+      destination === undefined
+        ? SettlementMethod.IntraLedger
+        : config.localNodeIds.includes(destination)
+        ? SettlementMethod.IntraLedger
+        : SettlementMethod.Lightning
     return {
       settlementMethod,
       btcProtocolFee:
@@ -44,7 +47,7 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
     }
     return LPFBWithInvoice({
       ...config,
-      ...settlementMethodFromInvoice(invoice),
+      ...settlementMethodFromDestination(invoice.destination),
       paymentHash: invoice.paymentHash,
       btcPaymentAmount: invoice.paymentAmount,
       inputAmount: invoice.paymentAmount.amount,
@@ -61,10 +64,26 @@ export const LightningPaymentFlowBuilder = <S extends WalletCurrency>(
   }): LPFBWithInvoice<S> | LPFBWithError => {
     return LPFBWithInvoice({
       ...config,
-      ...settlementMethodFromInvoice(invoice),
+      ...settlementMethodFromDestination(invoice.destination),
       paymentHash: invoice.paymentHash,
       uncheckedAmount,
       descriptionFromInvoice: invoice.description,
+    })
+  }
+
+  const withoutInvoice = ({
+    uncheckedAmount,
+    description,
+  }: {
+    uncheckedAmount: number
+    description: string
+  }): LPFBWithInvoice<S> | LPFBWithError => {
+    return LPFBWithInvoice({
+      ...config,
+      ...settlementMethodFromDestination(undefined),
+      paymentHash: invoice.paymentHash,
+      uncheckedAmount,
+      descriptionFromInvoice: description,
     })
   }
 

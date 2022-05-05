@@ -16,6 +16,10 @@ export const PaymentInputValidator = (
     senderAccount,
     recipientWalletId: uncheckedRecipientWalletId,
   }: ValidatePaymentInputArgs<T>) => {
+    console.log("HERE 2:", {
+      recipientWalletId: uncheckedRecipientWalletId,
+      senderWalletId: uncheckedSenderWalletId,
+    })
     const validAmount = checkedToCurrencyBaseAmount(amount)
     if (validAmount instanceof Error) return validAmount
 
@@ -37,6 +41,7 @@ export const PaymentInputValidator = (
 
       const recipientWallet = await getWalletFn(recipientWalletId)
       if (recipientWallet instanceof Error) return recipientWallet
+      console.log("HERE 3:", { r: recipientWallet.id, s: senderWallet.id })
       if (recipientWallet.id === senderWallet.id) return new SelfPaymentError()
       return {
         amount: validAmount,

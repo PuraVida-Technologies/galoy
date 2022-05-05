@@ -3,7 +3,7 @@ import { getCurrentPrice } from "@app/prices"
 import { PaymentSendStatus } from "@domain/bitcoin/lightning"
 import { InsufficientBalanceError, NotImplementedError } from "@domain/errors"
 import { DisplayCurrencyConverter } from "@domain/fiat/display-currency"
-import { PaymentInputValidator } from "@domain/wallets"
+import { checkedToWalletId, PaymentInputValidator } from "@domain/wallets"
 import { WalletCurrency } from "@domain/shared"
 import { LedgerService } from "@services/ledger"
 import { LockService } from "@services/lock"
@@ -16,7 +16,15 @@ import { NotificationsService } from "@services/notifications"
 
 import { toSats } from "@domain/bitcoin"
 
+import { AccountValidator } from "@domain/accounts"
+import { checkedToBtcPaymentAmount, checkedToUsdPaymentAmount } from "@domain/payments"
+import { constructPaymentFlowBuilder } from "@app/payments/helpers"
+import { addAttributesToCurrentSpan } from "@services/tracing"
+import { NewDealerPriceService } from "@services/dealer-price"
+
 import { checkAndVerifyTwoFA, checkIntraledgerLimits } from "./check-limit-helpers"
+
+const dealer = NewDealerPriceService()
 
 export const intraledgerPaymentSendUsername = async ({
   recipientUsername,
@@ -247,4 +255,58 @@ const executePaymentViaIntraledger = async ({
       return PaymentSendStatus.Success
     },
   )
+}
+
+export const validateIntraledgerPaymentInputs = async ({
+  amount,
+  uncheckedSenderWalletId,
+  senderAccount,
+}) => {
+  const senderWalletId = checkedToWalletId(uncheckedSenderWalletId)
+  if (senderWalletId instanceof Error) return senderWalletId
+
+  const senderWallet = await WalletsRepository().findById(senderWalletId)
+  if (senderWallet instanceof Error) return senderWallet
+
+  const accountValidated = AccountValidator().validateAccount({
+    account: senderAccount,
+    accountIdFromWallet: senderWallet.accountId,
+  })
+  if (accountValidated instanceof Error) return accountValidated
+
+  const inputPaymentAmount =
+    senderWallet.currency === WalletCurrency.Btc
+      ? checkedToBtcPaymentAmount(amount)
+      : checkedToUsdPaymentAmount(amount)
+  if (inputPaymentAmount instanceof Error) return inputPaymentAmount
+
+  const builderWithConversion = await constructPaymentFlowBuilder({
+    uncheckedAmount: amount,
+    senderWallet,
+    invoice: decodedInvoice,
+    usdFromBtc: dealer.getCentsFromSatsForImmediateBuy,
+    btcFromUsd: dealer.getSatsFromCentsForImmediateSell,
+  })
+  if (builderWithConversion instanceof Error) return builderWithConversion
+
+  const paymentFlow = await builderWithConversion.withoutRoute()
+  if (paymentFlow instanceof Error) return paymentFlow
+
+  if (paymentFlow instanceof Error) return paymentFlow
+
+  addAttributesToCurrentSpan({
+    "payment.amount": paymentFlow.btcPaymentAmount.amount.toString(),
+    "payment.request.destination": decodedInvoice.destination,
+    "payment.request.hash": decodedInvoice.paymentHash,
+    "payment.request.description": decodedInvoice.description,
+    "payment.request.expiresAt": decodedInvoice.expiresAt
+      ? decodedInvoice.expiresAt.toISOString()
+      : "undefined",
+  })
+
+  return {
+    senderWallet,
+    paymentFlow,
+    decodedInvoice,
+  }
 }
