@@ -16,6 +16,8 @@ import { NotificationsService } from "@services/notifications"
 
 import { toSats } from "@domain/bitcoin"
 
+import { ResourceAttemptsLockServiceError } from "@domain/lock"
+
 import { checkAndVerifyTwoFA, checkIntraledgerLimits } from "./check-limit-helpers"
 
 export const intraledgerPaymentSendUsername = async ({
@@ -209,42 +211,42 @@ const executePaymentViaIntraledger = async ({
 
   const amountDisplayCurrency = dCConverter.fromSats(amountSats)
 
-  return LockService().lockWalletId(
-    { walletId: senderWalletId, logger },
-    async (lock) => {
-      const balance = await LedgerService().getWalletBalance(senderWalletId)
-      if (balance instanceof Error) return balance
-      if (balance < amount) {
-        return new InsufficientBalanceError(
-          `Payment amount '${amount}' exceeds balance '${balance}'`,
-        )
-      }
-
-      const journal = await LockService().extendLock({ logger, lock }, async () =>
-        LedgerService().addWalletIdIntraledgerTxTransfer({
-          senderWalletId,
-          senderWalletCurrency: senderWallet.currency,
-          senderUsername: senderAccount.username,
-          description: "",
-          sats: amountSats,
-          amountDisplayCurrency,
-          recipientWalletId,
-          recipientWalletCurrency: recipientWallet.currency,
-          recipientUsername: recipientUsername || undefined,
-          memoPayer,
-        }),
+  return LockService().lockWalletId({ walletId: senderWalletId }, async (signal) => {
+    const balance = await LedgerService().getWalletBalance(senderWalletId)
+    if (balance instanceof Error) return balance
+    if (balance < amount) {
+      return new InsufficientBalanceError(
+        `Payment amount '${amount}' exceeds balance '${balance}'`,
       )
-      if (journal instanceof Error) return journal
+    }
 
-      const notificationsService = NotificationsService(logger)
-      notificationsService.intraLedgerPaid({
-        senderWalletId,
-        recipientWalletId,
-        amount: amountSats,
-        displayCurrencyPerSat,
-      })
+    if (signal.aborted) {
+      return new ResourceAttemptsLockServiceError(signal.error?.message)
+    }
 
-      return PaymentSendStatus.Success
-    },
-  )
+    const journal = await LedgerService().addWalletIdIntraledgerTxTransfer({
+      senderWalletId,
+      senderWalletCurrency: senderWallet.currency,
+      senderUsername: senderAccount.username,
+      description: "",
+      sats: amountSats,
+      amountDisplayCurrency,
+      recipientWalletId,
+      recipientWalletCurrency: recipientWallet.currency,
+      recipientUsername: recipientUsername || undefined,
+      memoPayer,
+    })
+
+    if (journal instanceof Error) return journal
+
+    const notificationsService = NotificationsService(logger)
+    notificationsService.intraLedgerPaid({
+      senderWalletId,
+      recipientWalletId,
+      amount: amountSats,
+      displayCurrencyPerSat,
+    })
+
+    return PaymentSendStatus.Success
+  })
 }
