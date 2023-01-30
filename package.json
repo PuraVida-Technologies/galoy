@@ -44,7 +44,7 @@
     "@opentelemetry/instrumentation-mongodb": "^0.32.1",
     "@opentelemetry/resources": "^1.7.0",
     "@opentelemetry/sdk-trace-base": "^1.7.0",
-    "@opentelemetry/sdk-trace-node": "^1.7.0",
+    "@opentelemetry/sdk-trace-node": "^1.9.1",
     "@opentelemetry/semantic-conventions": "^1.7.0",
     "@ory/client": "^0.2.0-alpha.60",
     "ajv": "^8.10.0",
