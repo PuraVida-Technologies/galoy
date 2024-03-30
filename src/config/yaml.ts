@@ -59,6 +59,14 @@ export const MEMO_SHARING_SATS_THRESHOLD = yamlConfig.spamLimits
 export const MEMO_SHARING_CENTS_THRESHOLD = yamlConfig.spamLimits
   .memoSharingCentsThreshold as UsdCents
 
+export const MEMO_PAYMENT_REFERRAL_PAYOUT = "Referral Payout"
+export const MEMO_PAYMENT_MERCHANT_PAYOUT = "Merchant Payout"
+
+export const MEMO_PAYMENT_FORWARDING_TERMS = [
+  MEMO_PAYMENT_REFERRAL_PAYOUT,
+  MEMO_PAYMENT_MERCHANT_PAYOUT,
+]
+
 // how many block are we looking back for getChainTransactions
 const getOnChainScanDepth = (val: number): ScanDepth => {
   const scanDepth = checkedToScanDepth(val)
@@ -143,8 +151,9 @@ export const getLndParams = (): LndParams[] => {
     if (!pubkey_) throw new ConfigError(`missing PUBKEY for ${input.name}`)
 
     const pubkey = checkedToPubkey(pubkey_)
-    if (pubkey instanceof Error)
+    if (pubkey instanceof Error) {
       throw new ConfigError(`wrong PUBKEY formatting for ${input.name}`)
+    }
 
     const port = process.env[`${input.name}_RPCPORT`] ?? 10009
     const type = input.type.map((item) => item as NodeType) // TODO: verify if validation is done from yaml.ts
@@ -335,7 +344,10 @@ export const getSwapConfig = (): SwapConfig => {
       amount: BigInt(config.loopOutWhenHotWalletLessThan),
       currency: WalletCurrency.Btc,
     },
-    swapOutAmount: { amount: BigInt(config.swapOutAmount), currency: WalletCurrency.Btc },
+    swapOutAmount: {
+      amount: BigInt(config.swapOutAmount),
+      currency: WalletCurrency.Btc,
+    },
     lnd1loopRestEndpoint: config.lnd1loopRestEndpoint,
     lnd2loopRestEndpoint: config.lnd2loopRestEndpoint,
     lnd1loopRpcEndpoint: config.lnd1loopRpcEndpoint,

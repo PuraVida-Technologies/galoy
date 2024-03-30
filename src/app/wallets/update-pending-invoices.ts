@@ -15,9 +15,9 @@ import { DealerPriceService } from "@services/dealer-price"
 import { LndService } from "@services/lnd"
 import {
   AccountsRepository,
+  UsersRepository,
   WalletInvoicesRepository,
   WalletsRepository,
-  UsersRepository,
 } from "@services/mongoose"
 import { NotificationsService } from "@services/notifications"
 import * as LedgerFacade from "@services/ledger/facade"
@@ -109,7 +109,10 @@ const updatePendingInvoiceBeforeFinally = async ({
     onUs: false,
   })
 
-  const lnInvoiceLookup = await lndService.lookupInvoice({ pubkey, paymentHash })
+  const lnInvoiceLookup = await lndService.lookupInvoice({
+    pubkey,
+    paymentHash,
+  })
   if (lnInvoiceLookup instanceof InvoiceNotFoundError) {
     const isDeleted = await walletInvoicesRepo.deleteByPaymentHash(paymentHash)
     if (isDeleted instanceof Error) {
@@ -336,7 +339,10 @@ export const declineHeldInvoice = wrapAsyncToRunInSpan({
 
     const walletInvoicesRepo = WalletInvoicesRepository()
 
-    const lnInvoiceLookup = await lndService.lookupInvoice({ pubkey, paymentHash })
+    const lnInvoiceLookup = await lndService.lookupInvoice({
+      pubkey,
+      paymentHash,
+    })
 
     const pendingInvoiceLogger = logger.child({
       hash: paymentHash,
@@ -378,7 +384,10 @@ export const declineHeldInvoice = wrapAsyncToRunInSpan({
       `invoice has been held ${heldForMsg}and is now been cancelled`,
     )
 
-    const invoiceSettled = await lndService.cancelInvoice({ pubkey, paymentHash })
+    const invoiceSettled = await lndService.cancelInvoice({
+      pubkey,
+      paymentHash,
+    })
     if (invoiceSettled instanceof Error) return invoiceSettled
 
     const isDeleted = await walletInvoicesRepo.deleteByPaymentHash(paymentHash)

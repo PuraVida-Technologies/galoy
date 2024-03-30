@@ -237,7 +237,10 @@ export const onchainTransactionEventHandler = async <T extends DisplayCurrency>(
           recipientAccountId: wallet.accountId,
           recipientWalletId: wallet.id,
           // TODO: tx.tokens represent the total sum, need to segregate amount by address
-          paymentAmount: { amount: BigInt(tx.tokens - fee), currency: wallet.currency },
+          paymentAmount: {
+            amount: BigInt(tx.tokens - fee),
+            currency: wallet.currency,
+          },
           displayPaymentAmount: displayAmount,
           txHash,
           recipientDeviceTokens: recipientUser.deviceTokens,
@@ -250,7 +253,10 @@ export const onchainTransactionEventHandler = async <T extends DisplayCurrency>(
 
 export const onchainBlockEventHandler = async (height: number) => {
   const scanDepth = (ONCHAIN_MIN_CONFIRMATIONS + 1) as ScanDepth
-  const txNumber = await WalletWithSpans.updateOnChainReceipt({ scanDepth, logger })
+  const txNumber = await WalletWithSpans.updateOnChainReceipt({
+    scanDepth,
+    logger,
+  })
   if (txNumber instanceof Error) {
     logger.error(
       { error: txNumber },

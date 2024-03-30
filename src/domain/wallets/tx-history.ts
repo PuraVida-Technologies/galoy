@@ -1,4 +1,5 @@
 import {
+  MEMO_PAYMENT_FORWARDING_TERMS,
   MEMO_SHARING_CENTS_THRESHOLD,
   MEMO_SHARING_SATS_THRESHOLD,
   OnboardingEarn,
@@ -320,12 +321,19 @@ const shouldDisplayMemo = ({
   credit: CurrencyBaseAmount
   currency: WalletCurrency
 }) => {
-  if (isAuthorizedMemo(memo) || credit === 0) return true
+  if (isForwardedMemo(memo) || isAuthorizedMemo(memo) || credit === 0) {
+    return true
+  }
 
-  if (currency === WalletCurrency.Btc) return credit >= MEMO_SHARING_SATS_THRESHOLD
+  if (currency === WalletCurrency.Btc) {
+    return credit >= MEMO_SHARING_SATS_THRESHOLD
+  }
 
   return credit >= MEMO_SHARING_CENTS_THRESHOLD
 }
+
+export const isForwardedMemo = (memo: string | undefined): boolean =>
+  !!memo && MEMO_PAYMENT_FORWARDING_TERMS.filter((term) => memo.includes(term)).length > 0
 
 const isAuthorizedMemo = (memo: string | undefined): boolean =>
   !!memo && Object.keys(OnboardingEarn).includes(memo)
