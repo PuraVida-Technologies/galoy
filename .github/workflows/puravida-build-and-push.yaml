@@ -1,0 +1,19 @@
+name: PuraVida Build and Deploy
+
+on:
+  push:
+    branches:
+      - 'puravida-production'
+    tags-ignore:
+      - '**'
+
+jobs:
+  build_and_push:
+    name: Build & Push
+    uses: PuraVida-Technologies/pura-vida-shared-workflows/.github/workflows/gcr-docker-build-and-push.yaml@main
+    secrets: inherit
+    with:
+      APP_NAME: "galoy"
+      CACHE_KEY_PATH: "yarn.lock"
+      GKE_PROJECT: "responsive-edge-344815"
+      PACKAGE_MANAGER: "yarn"
